@@ -45,19 +45,19 @@ function substituteProps(
 
 	/**
 	 * Svelte 4 pattern: `$$result, { props }, {}, { default: () =>  ... }`
-	 * Svelte 5 pattern: `$$payload, { props, children: ($$payload) => ...  }`,
-	 * So now the props are inbetween `$$payload, {` and `children:`
+	 * Svelte 5 pattern: `$$renderer, { props, children: ($$renderer) => ...  }`,
+	 * So now the props are inbetween `$$renderer, {` and `children:`
 	 * (With the exception of he deepest node in a branch, which has no children.)
 	 */
 
-	// `$$payload, {`
-	const regexStart = /\$\$payload,\s*{/g;
+	// `$$renderer, {`
+	const regexStart = /\$\$renderer,\s*{/g;
 
 	let matchStart;
 	let count = 0;
 	let classesNotFound: string[] = [];
 
-	// Loop all nodes: keep going as long as we find the `$$payload, {` pattern
+	// Loop all nodes: keep going as long as we find the `$$renderer, {` pattern
 	while ((matchStart = regexStart.exec(code)) !== null) {
 		count++;
 
@@ -68,7 +68,7 @@ function substituteProps(
 
 		// Some nodes have no children, so the matched 'children: (' will be from another node, with the result being that the prop string will be too long.
 		// In that case we need another way to find the end of the props
-		// We do that by matching the opening bracket from regexStart (`$$payload, {`)
+		// We do that by matching the opening bracket from regexStart (`$$renderer, {`)
 		// As a side note, we can't take the matching bracket for nodes WITH children,
 		// because the substring up to the closing bracket includes an ENTIRE branch of child nodes AND their props, defeating the point of trying to isolate props per child.
 		// What if it's the last node in the last branch?
@@ -109,7 +109,7 @@ function substituteProps(
 					// else, exlude it and append ` ,` (end of child already includes the closing bracket)
 					// One exception is when 'class' is the only prop and is empty (or ends up empty after taking out the tw-classes)...
 					// Because then we end up with invalid syntax
-					// like `Head($$payload, { , children:`, should be `Head($$payload, { children:`
+					// like `Head($$renderer, { , children:`, should be `Head($$renderer, { children:`
 					// Solution is to skip transformation if propsObj is empty
 					hasNoChildren ? propsObj : propsObj.slice(0, -2) + ', '
 				);
@@ -189,7 +189,6 @@ function convertKvs(input: string, twClean: string) {
 			objString = objString + `${objString.length > 0 ? ', ' : ''}` + `${kv.key}: ${kv.value}`;
 		}
 
-
 		// remove the found kv from the beginning of the string and traverse
 		// The "+ 2" comes from ": " and ", "
 		input = a.substring(kv.key.length + 2 + kv.value.length + 2);
@@ -204,7 +203,7 @@ function substituteHead(code: string, twClean: string) {
 	const headStyle = `<style>${getMediaQueryCss(twClean)}</style>`;
 
 	// const hasResponsiveStyles = /@media[^{]+\{(?<content>[\s\S]+?)\}\s*\}/gm.test(headStyle)
-	const startStringPre = 'Head($$payload, {';
+	const startStringPre = 'Head($$renderer, {';
 	const iS = code.indexOf(startStringPre);
 
 	if (iS === -1) {
@@ -212,7 +211,7 @@ function substituteHead(code: string, twClean: string) {
 	}
 
 	const stringAfterStart = code.substring(iS);
-	const stringToMatchBeforeHeadContent = '$$payload.out.push(`';
+	const stringToMatchBeforeHeadContent = '$$renderer.push(`';
 	const indexStartHeadContent =
 		stringAfterStart.indexOf(stringToMatchBeforeHeadContent) +
 		stringToMatchBeforeHeadContent.length;
